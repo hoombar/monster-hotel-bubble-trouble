@@ -90,11 +90,12 @@ class Hotel extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image("lobby", "/assets/hotel-lobby.png");
-    this.load.image("helper", "/assets/hotel-helper.png");
+    const assets = `${import.meta.env.BASE_URL}assets/`;
+    this.load.image("lobby", `${assets}hotel-lobby.png`);
+    this.load.image("helper", `${assets}hotel-helper.png`);
     for (const guest of GUESTS) {
-      this.load.image(guest.key, `/assets/guest-${guest.key}.png`);
-      this.load.image(guest.item, `/assets/item-${guest.item}.png`);
+      this.load.image(guest.key, `${assets}guest-${guest.key}.png`);
+      this.load.image(guest.item, `${assets}item-${guest.item}.png`);
     }
     this.load.on("loaderror", () => {
       this.failedLoad = true;

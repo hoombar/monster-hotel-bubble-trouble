@@ -57,6 +57,30 @@ npm run preview
 
 Deploy the `dist/` folder to any static website host, at the site root.
 
+### Publish to benpearson.dev
+
+The website hosts the game at `https://benpearson.dev/monster-hotel/`.
+With the website checkout alongside this repository, run:
+
+```sh
+npm run publish:site
+npm run test:production
+```
+
+An alternate checkout location can be supplied with
+`npm run publish:site -- /path/to/benpearson.dev`. This builds with Vite's
+`/monster-hotel/` base and replaces the website's `static/monster-hotel/` folder.
+It does not commit, push, or deploy automatically. Commit source changes here
+and generated files in the website repository, then push both repositories.
+The website's normal Hugo/Cloudflare build publishes the game unchanged.
+
+The production smoke test uses the built game, not the development server.
+To test a Hugo preview or the deployed game instead, set `GAME_TEST_URL`, e.g.
+`GAME_TEST_URL=https://benpearson.dev/monster-hotel/ npm run test:production`.
+For other hosts/subfolders, use `npm run build -- --base=/your-folder/`.
+
+### Browser Tests
+
 ```sh
 npx playwright install chromium
 npm test
