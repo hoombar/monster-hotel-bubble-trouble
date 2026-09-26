@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f9f2df" />
+    <title>Monster Hotel · Bubble Trouble</title>
+  </head>
+  <body>
+    <main class="hotel">
+      <header class="masthead">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">M<span>H</span></span>
+          <div>
+            <p class="eyebrow">A very friendly little</p>
+            <h1>Monster Hotel</h1>
+          </div>
+        </div>
+        <div class="edition">
+          <span class="status-dot"></span> COSY SHIFT
+          <span class="edition-small">No rush. Just bubbles.</span>
+        </div>
+      </header>
+      <section class="game-shell" aria-label="Bubble Trouble game">
+        <div class="shift-bar">
+          <div>
+            <span class="shift-label">TODAY'S MISSION</span
+            ><strong>Bubble trouble!</strong>
+          </div>
+          <div class="progress" aria-label="Delivery progress">
+            <span id="stars" aria-hidden="true"></span
+            ><span id="score">0 / 6</span>
+          </div>
+          <button id="music" class="small-button" aria-pressed="true">
+            Music on
+          </button>
+          <button id="sound" class="small-button" aria-pressed="true">
+            Sound on</button
+          ><button id="pause" class="small-button" disabled>Pause</button>
+        </div>
+        <div class="stage-wrap">
+          <div
+            id="game"
+            role="application"
+            aria-label="Move with arrow keys. Hold space to catch toys. Touch a bubble to collect it and walk to the matching guest."
+            tabindex="0"
+          ></div>
+          <div class="overlay" id="intro">
+            <div class="welcome-card">
+              <p class="eyebrow">WELCOME, LITTLE HELPER</p>
+              <h2>A little hotel.<br />A bubbly adventure.</h2>
+              <p>
+                The toys have run away! Catch them in bubbles and bring them
+                back to their monster friends.
+              </p>
+              <div class="preview-guests">
+                <img
+                  src="/assets/guest-slime.png"
+                  alt="A friendly purple slime"
+                /><img src="/assets/guest-yeti.png" alt="A sleepy yeti" /><img
+                  src="/assets/guest-bath-monster.png"
+                  alt="A mint-green bath monster"
+                />
+              </div>
+              <button class="primary-button" id="start" disabled>
+                Opening the hotel...</button
+              ><span class="gentle-note"
+                >Six happy deliveries. No timer. No losing.</span
+              >
+            </div>
+          </div>
+          <div class="overlay" id="paused" hidden>
+            <div class="welcome-card compact">
+              <p class="eyebrow">TAKE YOUR TIME</p>
+              <h2>Tea break!</h2>
+              <p>Your monster friends will wait right here.</p>
+              <button id="resume" class="primary-button">Keep playing</button>
+            </div>
+          </div>
+          <div class="overlay" id="finished" hidden>
+            <div class="welcome-card compact">
+              <p class="eyebrow">SIX DELIVERIES. SIX BIG SMILES.</p>
+              <div class="finish-stars" aria-hidden="true">
+                &#9733; &#9733; &#9733;
+              </div>
+              <h2>Hotel heroes!</h2>
+              <p>Every toy is home. The monsters think you're wonderful.</p>
+              <button id="restart" class="primary-button">
+                Another cosy shift</button
+              ><span class="gentle-note">A lovely moment to swap players.</span>
+            </div>
+          </div>
+        </div>
+        <div class="message-bar">
+          <span class="message-dot" aria-hidden="true"></span>
+          <p id="message" aria-live="polite">
+            Your monster friends are checking in.
+          </p>
+          <span class="room-note">THE LOBBY</span>
+        </div>
+      </section>
+      <section class="touch-controls" aria-label="Touch controls">
+        <div class="dpad">
+          <button data-key="up" aria-label="Move up">&#8593;</button
+          ><button data-key="left" aria-label="Move left">&#8592;</button
+          ><button data-key="down" aria-label="Move down">&#8595;</button
+          ><button data-key="right" aria-label="Move right">&#8594;</button>
+        </div>
+        <button
+          data-key="bubble"
+          class="bubble-button"
+          aria-label="Blow bubbles"
+        >
+          Blow<br />bubbles <span aria-hidden="true">&#9675;</span>
+        </button>
+      </section>
+      <footer>
+        <div class="instructions">
+          <span
+            ><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd
+            ><kbd>&rarr;</kbd> Move around</span
+          ><span><kbd>space</kbd> Hold to blow bubbles</span
+          ><span class="auto-tip">Pick up &amp; deliver automatically</span>
+        </div>
+        <p>Made for little imaginations.</p>
+      </footer>
+    </main>
+    <audio id="background-music" loop preload="none"></audio>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
