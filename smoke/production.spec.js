@@ -43,9 +43,39 @@ test("production game loads its assets and plays music under the site subfolder"
     [...localAssets].every((url) => url.startsWith("/monster-hotel/")),
   ).toBe(true);
   expect(failures).toEqual([]);
+  await expect(page.locator("#ai-panel")).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
     390,
   );
   await expect(page.locator('[data-key="bubble"]')).toBeVisible();
+});
+
+test("production AI panel plays without exposing the scene globally", async ({ page }) => {
+  const states = [];
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.route("https://openrouter.ai/api/alpha/decisions", (route) => {
+    const body = route.request().postDataJSON();
+    expect(body.model).toBe("typesafe/jev-1.13");
+    states.push(JSON.parse(body.state.split("Current state:\n")[1]));
+    return route.fulfill({
+      headers: { "Access-Control-Allow-Origin": "*" },
+      json: { answers: { action: { choice: "right_shoot", confidence: 0.9 } } },
+    });
+  });
+  await page.goto("./?ai=1");
+  await expect(page.locator("#ai-panel")).toBeVisible();
+  await expect(page.locator("#start")).toBeEnabled();
+  expect(await page.evaluate(() => window.__hotel)).toBeUndefined();
+  await page.locator("#ai-key").fill("sk-or-test-not-real");
+  await page.locator("#ai-limit").fill("1");
+  await page.locator("#ai-start").click();
+  await expect(page.locator("#ai-status")).toContainText("Request limit reached");
+  await page.locator("#ai-start").click();
+  await expect(page.locator("#ai-status")).toContainText("Request limit reached");
+  expect(states).toHaveLength(2);
+  expect(states[1].player.x).toBeGreaterThan(states[0].player.x + 20);
+  expect(await page.evaluate(() => window.__hotel)).toBeUndefined();
+  expect(errors).toEqual([]);
 });

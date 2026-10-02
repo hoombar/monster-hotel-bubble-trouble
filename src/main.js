@@ -1,6 +1,9 @@
 import Phaser from "phaser";
 import musicUrl from "../music/chiptune.mp3?url";
 import "./style.css";
+import { snapshot } from "./jev-state.js";
+
+if (import.meta.env.DEV) import("./jev-browser.js");
 
 const $ = (id) => document.getElementById(id);
 const W = 1000,
@@ -40,6 +43,8 @@ const touch = {
 };
 const pointers = new Map(Object.keys(touch).map((key) => [key, new Set()]));
 let scene;
+let aiController;
+const aiInput = { up: false, down: false, left: false, right: false, bubble: false };
 let soundEnabled = true;
 let audio;
 let musicEnabled = true;
@@ -215,6 +220,7 @@ class Hotel extends Phaser.Scene {
   togglePause(force) {
     if (!this.running) return;
     this.paused = force ?? !this.paused;
+    if (this.paused) aiController?.stop("Game paused");
     updateMusic();
     this.tweens.paused = this.paused;
     $("paused").hidden = !this.paused;
@@ -325,11 +331,11 @@ class Hotel extends Phaser.Scene {
     if (!this.running || this.paused) return;
     const dt = Math.min(delta / 1000, 0.04);
     let dx =
-      Number(this.keys.right.isDown || touch.right) -
-      Number(this.keys.left.isDown || touch.left);
+      Number(this.keys.right.isDown || touch.right || aiInput.right) -
+      Number(this.keys.left.isDown || touch.left || aiInput.left);
     let dy =
-      Number(this.keys.down.isDown || touch.down) -
-      Number(this.keys.up.isDown || touch.up);
+      Number(this.keys.down.isDown || touch.down || aiInput.down) -
+      Number(this.keys.up.isDown || touch.up || aiInput.up);
     const length = Math.hypot(dx, dy);
     if (length) {
       dx /= length;
@@ -367,7 +373,7 @@ class Hotel extends Phaser.Scene {
         );
       this.aim.setDepth(899);
     }
-    if (this.keys.space.isDown || touch.bubble) this.blow(time);
+    if (this.keys.space.isDown || touch.bubble || aiInput.bubble) this.blow(time);
 
     for (const bubble of [...this.bubbles]) {
       bubble.x += bubble.vx * dt;
@@ -483,6 +489,7 @@ $("start").addEventListener("click", () => scene?.startShift());
 $("pause").addEventListener("click", () => scene?.togglePause());
 $("resume").addEventListener("click", () => scene?.togglePause(false));
 $("restart").addEventListener("click", () => {
+  aiController?.stop("Game restarted");
   $("finished").hidden = true;
   scene.scene.restart();
   scene.events.once("create", () => scene.startShift());
@@ -527,11 +534,34 @@ window.addEventListener("keydown", (event) => {
   if (event.code === "Escape" && !event.repeat) scene?.togglePause();
 });
 window.addEventListener("blur", () => {
+  if (import.meta.env.DEV && window.__hotelAutomation) return;
   if (scene?.running) scene.togglePause(true);
   music.pause();
 });
 window.addEventListener("focus", updateMusic);
 document.addEventListener("visibilitychange", () => {
+  if (import.meta.env.DEV && window.__hotelAutomation) return;
   if (document.hidden && scene?.running) scene.togglePause(true);
   updateMusic();
 });
+
+if (new URLSearchParams(location.search).get("ai") === "1") {
+  import("./jev-panel.js").then(({ mountJevPanel }) => {
+    aiController = mountJevPanel({
+      getState: () => scene ? snapshot(scene) : null,
+      prepare: () => {
+        if (!scene || scene.failedLoad || !scene.keys) throw new Error("The game is still loading; try again shortly.");
+        if (scene.score === 6) throw new Error("Start another cosy shift before running Jev again.");
+        if (!scene.running) scene.startShift();
+        if (scene.paused) scene.togglePause(false);
+      },
+      setAction: (action) => {
+        Object.keys(aiInput).forEach((key) => { aiInput[key] = false; });
+        if (!action) return;
+        const move = action.replace(/_shoot$/, "");
+        if (move !== "stay") aiInput[move] = true;
+        aiInput.bubble = action.endsWith("_shoot");
+      },
+    });
+  });
+}

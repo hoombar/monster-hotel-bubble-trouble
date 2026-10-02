@@ -381,6 +381,132 @@ kbd {
   transform: translateY(2px);
   box-shadow: none;
 }
+.ai-panel {
+  border: 1px solid #d7ccb5;
+  border-radius: 18px;
+  background: #fffcf4;
+  padding: 22px;
+  margin-top: 20px;
+  min-width: 0;
+}
+.ai-panel h2 {
+  font-size: 28px;
+  letter-spacing: -0.8px;
+  margin-bottom: 12px;
+}
+.ai-panel .eyebrow {
+  color: var(--teal);
+}
+.ai-description,
+#ai-status {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.ai-panel label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+}
+.ai-panel input:not([type="checkbox"]) {
+  width: 100%;
+  min-width: 0;
+  margin: 7px 0 12px;
+  padding: 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fffaf0;
+  border: 1px solid #d7ccb5;
+  border-radius: 7px;
+}
+.ai-panel input:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+.ai-panel .ai-remember {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 400;
+}
+.ai-remember input {
+  accent-color: var(--teal);
+}
+.ai-note {
+  font-size: 10px;
+  line-height: 1.6;
+  color: #716959;
+}
+.ai-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+.ai-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ai-buttons .primary-button {
+  width: auto;
+  flex: 1;
+  font-size: 13px;
+  padding: 10px 14px;
+}
+#ai-status {
+  padding: 10px 0;
+  border-bottom: 1px solid #ded5c4;
+  color: var(--teal);
+  overflow-wrap: anywhere;
+}
+.ai-log-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+#ai-log {
+  height: 220px;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 8px;
+  background: #302c41;
+  color: #e8e2cd;
+  font: 11px/1.65 ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+#ai-log > div + div {
+  margin-top: 8px;
+}
+@media (min-width: 1050px) {
+  .hotel.ai-enabled {
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 0 24px;
+  }
+  .ai-enabled .masthead,
+  .ai-enabled footer {
+    grid-column: 1 / -1;
+  }
+  .ai-enabled .game-shell {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+  }
+  .ai-enabled .touch-controls {
+    grid-column: 1;
+  }
+  .ai-panel {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 0;
+    align-self: start;
+  }
+}
 @media (pointer: coarse) {
   .touch-controls {
     display: flex;

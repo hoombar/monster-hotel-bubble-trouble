@@ -9,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test",
+    "play:jev": "node scripts/play-jev.mjs",
     "publish:site": "node scripts/publish-site.mjs",
     "test:production": "playwright test --config playwright.production.config.js"
   },
