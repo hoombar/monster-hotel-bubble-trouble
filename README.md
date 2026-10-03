@@ -79,6 +79,24 @@ changes, bounces, frame timing, and inference latency can invalidate them.
 If a pickup or delivery changes the task during inference, the old action is
 discarded and the next request uses fresh state, without pausing gameplay.
 
+Use **Expand terminal** for a taller log and wider desktop panel (the log can
+also be resized vertically). Click a request line, or open **Requests &
+responses**, to inspect any retained call. The selector shows calls across runs,
+including pending, failed, timed-out, and cancelled requests. **Follow latest
+call** updates automatically; selecting an older call turns following off.
+The inspector shows the exact JSON body sent, the complete received JSON (or
+non-JSON error body), HTTP status, timing, and whether the action was executed,
+interrupted, or discarded. The decoded view expands the strings containing
+game state and action forecasts for easier reading; it is not a different
+payload or a model reasoning trace.
+
+History is held in memory for the latest 200 calls, not saved to browser
+storage. **Download history JSON** exports those retained calls. **Clear log**
+only clears terminal lines; **Clear history** removes the inspector records.
+Reloading also clears both. Authorization headers are never captured and any
+echo of the current API key in response bodies is redacted before retention,
+display, or download. Raw response JSON may therefore show `[REDACTED]`.
+
 The key stays in memory unless you select **Remember for this tab**, which uses
 `sessionStorage`, not a cookie. It survives reloads in that tab and normally
 disappears when the tab closes. **Forget key** stops the run and clears both the

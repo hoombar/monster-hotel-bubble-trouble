@@ -111,6 +111,8 @@ test("pausing aborts an in-flight request and late responses cannot move the pla
   await page.locator("#pause").click();
   await expect(page.locator("#ai-start")).toBeEnabled();
   await expect(page.locator("#ai-status")).toContainText("Game paused");
+  await expect(page.locator("#ai-request-meta")).toContainText("cancelled");
+  await expect(page.locator("#ai-response-json")).toContainText("No response received");
   await pending.fulfill({ headers, json: answer() }).catch(() => {});
   await page.locator("#resume").click();
   await page.waitForTimeout(300);
@@ -136,6 +138,7 @@ test("invalid answers and authentication errors fail without leaking response bo
   await expect(page.locator("#ai-status")).toContainText("unreadable response");
   expect(calls).toBe(3);
   await expect(page.locator("#ai-log")).not.toContainText(fakeKey);
+  await expect(page.locator("#ai-response-json")).toHaveText("[REDACTED]");
 });
 
 test("hiding the tab stops the controller before another request", async ({ page }) => {
@@ -214,4 +217,109 @@ test("a pickup during inference invalidates an old shooting decision", async ({ 
   expect(calls).toBe(1);
   expect(await page.evaluate(() => window.__hotel.playerPos.x)).toBe(500);
   await expect(page.locator("#ai-log")).toContainText("discarding the stale action");
+  await expect(page.locator("#ai-request-meta")).toContainText("Discarded: task changed");
+});
+
+test("the inspector shows the exact request and full response without following over an older call", async ({ page }) => {
+  const bodies = [];
+  const replies = [];
+  await page.route(endpoint, (route) => {
+    bodies.push(route.request().postDataJSON());
+    const reply = { ...answer(bodies.length === 1 ? "right" : "left"), id: `gen-test-${bodies.length}`, model: "typesafe/jev-1.13-20260917", provider: "TypeSafe", extra: { retained: true } };
+    replies.push(reply);
+    return route.fulfill({ headers, json: reply });
+  });
+  await openPanel(page);
+  await page.locator("#ai-limit").fill("2");
+  await page.locator("#ai-start").click();
+  await expect(page.locator("#ai-status")).toContainText("Request limit reached");
+  await page.locator("#ai-inspector > summary").click();
+  await expect(page.locator("#ai-request-select option")).toHaveCount(2);
+  expect(JSON.parse(await page.locator("#ai-request-json").textContent())).toEqual(bodies[1]);
+  expect(JSON.parse(await page.locator("#ai-response-json").textContent())).toEqual(replies[1]);
+  await expect(page.locator("#ai-request-meta")).toContainText("Executed left for 250ms");
+  await page.locator("#ai-request-select").selectOption("1");
+  await expect(page.locator("#ai-follow")).not.toBeChecked();
+  expect(JSON.parse(await page.locator("#ai-request-json").textContent())).toEqual(bodies[0]);
+  const decoded = JSON.parse(await page.locator("#ai-decoded-json").textContent());
+  expect(decoded.state.player.x).toBe(500);
+  expect(decoded.actionOptions.right_shoot.forecast.shooting.requested).toBe(true);
+  await page.locator("#ai-limit").fill("1");
+  await page.locator("#ai-start").click();
+  await expect(page.locator("#ai-request-select option")).toHaveCount(3);
+  await expect(page.locator("#ai-status")).toContainText("Request limit reached");
+  await expect(page.locator("#ai-request-select")).toHaveValue("1");
+  expect(JSON.parse(await page.locator("#ai-response-json").textContent())).toEqual(replies[0]);
+  await page.locator("#ai-follow").check();
+  await expect(page.locator("#ai-request-select")).toHaveValue("3");
+  await page.locator("#ai-clear").click();
+  await expect(page.locator("#ai-log")).toBeEmpty();
+  await expect(page.locator("#ai-request-select option")).toHaveCount(3);
+  await page.locator("#ai-clear-history").click();
+  await expect(page.locator("#ai-request-select")).toBeDisabled();
+  await expect(page.locator("#ai-request-json")).toHaveText("No request selected.");
+});
+
+test("a pending request can be inspected by clicking its log line", async ({ page }) => {
+  let pending;
+  await page.route(endpoint, (route) => { pending = route; });
+  await openPanel(page);
+  await page.locator("#ai-limit").fill("1");
+  await page.locator("#ai-start").click();
+  await expect.poll(() => Boolean(pending)).toBe(true);
+  await page.locator(".ai-log-request").click();
+  await expect(page.locator("#ai-inspector")).toHaveAttribute("open", "");
+  await expect(page.locator("#ai-request-meta")).toContainText("pending");
+  await expect(page.locator("#ai-request-json")).toContainText("typesafe/jev-1.13");
+  await expect(page.locator("#ai-response-json")).toContainText("No response received yet");
+  await pending.fulfill({ headers, json: answer("stay") });
+  await expect(page.locator("#ai-status")).toContainText("Request limit reached");
+  await expect(page.locator("#ai-request-meta")).toContainText("HTTP 200");
+  await expect(page.locator("#ai-request-meta")).toContainText("Executed stay");
+});
+
+test("response inspection and downloads redact echoed credentials and omit headers", async ({ page }) => {
+  await page.route(endpoint, (route) => route.fulfill({
+    status: 401, headers, json: { error: { message: `Invalid key ${fakeKey}` }, debug: "<img src=x onerror=alert(1)>" },
+  }));
+  await openPanel(page);
+  await page.locator("#ai-start").click();
+  await expect(page.locator("#ai-status")).toContainText("HTTP 401");
+  await page.locator("#ai-inspector > summary").click();
+  await expect(page.locator("#ai-response-json")).toContainText("Invalid key [REDACTED]");
+  await expect(page.locator("#ai-response-json img")).toHaveCount(0);
+  await expect(page.locator("#ai-inspector")).not.toContainText(fakeKey);
+  const downloaded = page.waitForEvent("download");
+  await page.locator("#ai-download").click();
+  const download = await downloaded;
+  expect(download.suggestedFilename()).toBe("monster-hotel-jev-history.json");
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  const text = Buffer.concat(chunks).toString("utf8");
+  const records = JSON.parse(text);
+  expect(records).toHaveLength(1);
+  expect(records[0]).toMatchObject({ status: "failed", httpStatus: 401, response: { error: { message: "Invalid key [REDACTED]" } } });
+  expect(text).not.toContain(fakeKey);
+  expect(text).not.toContain("Bearer");
+  expect(records[0]).not.toHaveProperty("headers");
+});
+
+test("expanded terminal and inspector fit desktop and mobile", async ({ page }) => {
+  await page.route(endpoint, (route) => route.fulfill({ headers, json: answer("stay") }));
+  await openPanel(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.locator("#ai-limit").fill("1");
+  await page.locator("#ai-start").click();
+  await expect(page.locator("#ai-status")).toContainText("Request limit reached");
+  const before = await page.locator("#ai-panel").boundingBox();
+  await page.locator("#ai-expand").click();
+  await expect(page.locator("#ai-expand")).toHaveAttribute("aria-expanded", "true");
+  expect((await page.locator("#ai-panel").boundingBox()).width).toBeGreaterThan(before.width);
+  await page.locator("#ai-inspector > summary").click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1440);
+  await page.screenshot({ path: "test-results/jev-inspector-desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  await page.screenshot({ path: "test-results/jev-inspector-mobile.png", fullPage: true });
 });

@@ -98,34 +98,62 @@ export function buildDecisionContext(state, actionMs) {
   return { phase, carriedItem: player.carried, destination: destination ? { guest: destination.name, item: destination.item, x: destination.x } : null, targets, distanceToGoal: round(distanceBefore), forecasts };
 }
 
-export async function askDecision(state, { apiKey, actionMs, signal, history = [], provider = "openrouter", fetchImpl = fetch }) {
+export async function askDecision(state, { apiKey, actionMs, signal, history = [], provider = "openrouter", fetchImpl = fetch, onExchange }) {
   const context = buildDecisionContext(state, actionMs);
   const { forecasts, ...goal } = context;
   const criteria = Object.fromEntries(Object.entries(actions).map(([action, description]) => [action, `${description}\nForecast: ${JSON.stringify(forecasts[action])}`]));
   const native = provider === "typesafe";
-  const response = await fetchImpl(native ? "https://api.typesafe.ai/v1/systemone" : "https://openrouter.ai/api/alpha/decisions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
-    body: JSON.stringify({
-      model: native ? "jev-latest" : "typesafe/jev-1.13",
-      state: `${rules}\nEach chosen action will be held for ${actionMs}ms.\nCurrent state:\n${JSON.stringify({ ...state, decisionContext: goal, recentOutcomes: history.slice(-5) })}`,
-      questions: { action: { type: "choice", instructions: "Choose the best next action for decisionContext.phase. Match the carried item to decisionContext.destination, compare action forecasts, and avoid repeating actions that made no progress. For catching, consider predicted bubble/toy intersections; for collecting or delivering, reduce distance to the correct goal.", criteria } },
-    }),
-  });
-  if (!response.ok) {
-    // Response bodies may echo credentials; only expose the status code.
-    const error = new Error(`Jev API returned HTTP ${response.status}`);
-    error.retryable = response.status === 429 || response.status >= 500;
-    throw error;
-  }
-  let result;
+  const endpoint = native ? "https://api.typesafe.ai/v1/systemone" : "https://openrouter.ai/api/alpha/decisions";
+  const body = {
+    model: native ? "jev-latest" : "typesafe/jev-1.13",
+    state: `${rules}\nEach chosen action will be held for ${actionMs}ms.\nCurrent state:\n${JSON.stringify({ ...state, decisionContext: goal, recentOutcomes: history.slice(-5) })}`,
+    questions: { action: { type: "choice", instructions: "Choose the best next action for decisionContext.phase. Match the carried item to decisionContext.destination, compare action forecasts, and avoid repeating actions that made no progress. For catching, consider predicted bubble/toy intersections; for collecting or delivering, reduce distance to the correct goal.", criteria } },
+  };
+  const exchange = { endpoint, method: "POST", request: body, status: "pending" };
+  const notify = () => {
+    if (!onExchange) return;
+    // Never retain headers, and redact credentials even if a provider echoes them.
+    const json = JSON.stringify(exchange);
+    onExchange(JSON.parse(apiKey ? json.replaceAll(apiKey, "[REDACTED]") : json));
+  };
+  const started = performance.now();
+  const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(10_000)]);
+  notify();
   try {
-    result = await response.json();
-  } catch {
-    throw new Error("Jev returned an unreadable response");
+    const response = await fetchImpl(endpoint, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      signal: requestSignal,
+      body: JSON.stringify(body),
+    });
+    exchange.httpStatus = response.status;
+    const text = await response.text();
+    let result;
+    let parsed = false;
+    try {
+      result = JSON.parse(text);
+      parsed = true;
+      exchange.response = result;
+    } catch {
+      exchange.responseText = text;
+    }
+    if (!response.ok) {
+      const error = new Error(`Jev API returned HTTP ${response.status}`);
+      error.retryable = response.status === 429 || response.status >= 500;
+      throw error;
+    }
+    if (!parsed) throw new Error("Jev returned an unreadable response");
+    const answer = result?.answers?.action;
+    if (!answer || !Object.hasOwn(actions, answer.choice)) throw new Error("Jev returned an invalid action");
+    exchange.status = "received";
+    return { action: answer.choice, confidence: answer.confidence, probabilities: answer.probabilities, usage: result.usage, context };
+  } catch (error) {
+    const failure = requestSignal.aborted ? requestSignal.reason : error;
+    exchange.status = signal.aborted ? "cancelled" : requestSignal.aborted ? "timed out" : "failed";
+    exchange.error = failure.message;
+    throw failure;
+  } finally {
+    exchange.durationMs = Math.round(performance.now() - started);
+    notify();
   }
-  const answer = result?.answers?.action;
-  if (!answer || !Object.hasOwn(actions, answer.choice)) throw new Error("Jev returned an invalid action");
-  return { action: answer.choice, confidence: answer.confidence, probabilities: answer.probabilities, usage: result.usage, context };
 }

@@ -76,6 +76,10 @@ test("production AI panel plays without exposing the scene globally", async ({ p
   await expect(page.locator("#ai-status")).toContainText("Request limit reached");
   expect(states).toHaveLength(2);
   expect(states[1].player.x).toBeGreaterThan(states[0].player.x + 20);
+  await page.locator("#ai-inspector > summary").click();
+  await expect(page.locator("#ai-request-select option")).toHaveCount(2);
+  expect(JSON.parse(await page.locator("#ai-request-json").textContent()).model).toBe("typesafe/jev-1.13");
+  expect(JSON.parse(await page.locator("#ai-response-json").textContent()).answers.action.choice).toBe("right_shoot");
   expect(await page.evaluate(() => window.__hotel)).toBeUndefined();
   expect(errors).toEqual([]);
 });

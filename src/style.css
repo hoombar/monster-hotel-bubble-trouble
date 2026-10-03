@@ -481,6 +481,89 @@ kbd {
 #ai-log > div + div {
   margin-top: 8px;
 }
+#ai-log {
+  resize: vertical;
+  min-height: 160px;
+  max-height: 70vh;
+}
+#ai-log .ai-log-request {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 4px 6px;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  color: #b1e6e3;
+  background: #ffffff08;
+  border: 1px solid #b1e6e340;
+  border-radius: 4px;
+}
+#ai-log .ai-log-request:hover {
+  background: #ffffff14;
+}
+.ai-terminal-expanded #ai-log {
+  height: 420px;
+}
+#ai-inspector {
+  margin-top: 16px;
+  border-top: 1px solid #ded5c4;
+  padding-top: 12px;
+}
+#ai-inspector summary {
+  cursor: pointer;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 700;
+}
+#ai-request-select {
+  width: 100%;
+  min-width: 0;
+  margin: 8px 0 12px;
+  padding: 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: #fffaf0;
+  border: 1px solid #d7ccb5;
+  border-radius: 7px;
+}
+#ai-request-meta {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ai-json-grid {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0;
+}
+.ai-json-grid section {
+  min-width: 0;
+}
+.ai-json-grid h3 {
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+#ai-inspector pre {
+  max-height: 340px;
+  overflow: auto;
+  padding: 12px;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #302c41;
+  color: #e8e2cd;
+  border-radius: 7px;
+  font: 11px/1.65 ui-monospace, monospace;
+}
+.ai-decoded {
+  margin-bottom: 16px;
+}
+@media (min-width: 701px) {
+  .ai-terminal-expanded .ai-json-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
 @media (min-width: 1050px) {
   .hotel.ai-enabled {
     max-width: 1440px;
@@ -505,6 +588,13 @@ kbd {
     grid-row: 2;
     margin-top: 0;
     align-self: start;
+  }
+  .hotel.ai-enabled.ai-terminal-expanded {
+    grid-template-columns: minmax(300px, 1fr) minmax(340px, 600px);
+  }
+  .ai-enabled.ai-terminal-expanded .game-shell {
+    position: sticky;
+    top: 20px;
   }
 }
 @media (pointer: coarse) {
